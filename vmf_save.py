@@ -1,9 +1,10 @@
 import bpy
 import bpy_extras.io_utils
 import bmesh
+import mathutils
 from .cbre import VersionInfo, VmfVertex
 from .vmflib.vmflib import vmf
-from .vmflib.vmflib.types import Vertex, Output, Origin, Plane
+from .vmflib.vmflib.types import Vertex, Output, Origin, Plane, Axis
 from .vmflib.vmflib.tools import Block
 from .vmflib.vmflib.brush import Solid, Side
 
@@ -36,17 +37,41 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                     for f in faces:
                         mat = bpy.data.materials[f.material_index]
                         verts = f.verts
+                        pos = []
+                        for v in f.verts:
+                            pos.append(ob.matrix_world @ v.co)
                         if len(verts) == 3:
-                            vert0 = Vertex(verts[0].co.x * 102.4, verts[0].co.y * 102.4, verts[0].co.z * 102.4)
-                            vert1 = Vertex(verts[1].co.x * 102.4, verts[1].co.y * 102.4, verts[1].co.z * 102.4)
-                            vert2 = Vertex(verts[2].co.x * 102.4, verts[2].co.y * 102.4, verts[2].co.z * 102.4)
-                            side = Side(Plane(vert2, vert1, vert0), mat.name)
+                            scale = 102.4
+                            vert0 = Vertex(pos[0].x * scale, pos[0].y * scale, pos[0].z * scale)
+                            vert1 = Vertex(pos[1].x * scale, pos[1].y * scale, pos[1].z * scale)
+                            vert2 = Vertex(pos[2].x * scale, pos[2].y * scale, pos[2].z * scale)
+                            plane = Plane(vert2, vert1, vert0)
+                            side = Side(plane, mat.name)
                             vertx = VmfVertex()
                             vertx.properties["count"] = 3
                             vertx.properties["vertex0"] = vert2
                             vertx.properties["vertex1"] = vert1
                             vertx.properties["vertex2"] = vert0
                             side.children.append(vertx)
+                            # side.uaxis, side.vaxis = plane.sensible_axes()
+                            side.uaxis, side.vaxis = self.axis_calc(plane)
+                            norms = f.normal
+                            # norms = f.calc_center_median() * norms
+                            # norms = ob.matrix_world @ norms
+                            ua = norms.copy()
+                            ua.rotate(mathutils.Euler((0.0, 90.0, 0.0)))
+                            va = norms.copy()
+                            va.rotate(mathutils.Euler((90.0, 0.0, 0.0)))
+
+                            # side.uaxis = Axis(ua.x, ua.y, ua.z, 0, 0)
+                            # side.vaxis = Axis(va.x, va.y, va.z, 0, 0)
+                            uv_layer = 0
+                            
+                            xs = f.loops[0][bm.loops.layers.uv.active].uv.x + f.loops[1][bm.loops.layers.uv.active].uv.x + f.loops[2][bm.loops.layers.uv.active].uv.x
+                            ys = f.loops[0][bm.loops.layers.uv.active].uv.y + f.loops[1][bm.loops.layers.uv.active].uv.y + f.loops[2][bm.loops.layers.uv.active].uv.y
+
+                            side.uaxis.scale = xs / 3.0
+                            side.vaxis.scale = ys / 3.0
                             blk.children.append(side)
                         else:
                             print("a face was missed! " + str(f))
@@ -70,3 +95,37 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
+
+    def axis_calc(self, axis):
+        """Returns a sensible uaxis and vaxis for this plane."""
+        # TODO: Rewrite this method to allow non-90deg planes to work
+        # Figure out which axes the plane exists in
+        axes = [1, 1, 1]
+        axes[0] = (axis.v0.x - axis.v1.x - axis.v2.x) / 3.0
+        axes[1] = (axis.v0.y - axis.v1.y - axis.v2.y) / 3.0
+        axes[2] = (axis.v0.z - axis.v1.z - axis.v2.z) / 3.0
+        # if axis.v0.x == axis.v1.x == axis.v2.x:
+        #     axes[0] = 0
+        # if axis.v0.y == axis.v1.y == axis.v2.y:
+        #     axes[1] = 0
+        # if axis.v0.z == axis.v1.z == axis.v2.z:
+        #     axes[2] = 0
+
+        # Figure out uaxis xyz
+        u = [0, 0, 0]
+        for i in range(3):
+            if axes[i] != 0.0:
+                u[i] = axes[i]
+                axes[i] = 0
+                break
+
+        # Figure out vaxis xyz
+        v = [0, 0, 0]
+        for i in range(3):
+            if axes[i] != 0.0:
+                v[i] = -axes[i]
+                break
+
+        uaxis = Axis(u[0], u[1], u[2])
+        vaxis = Axis(v[0], v[1], v[2])
+        return (uaxis, vaxis)
