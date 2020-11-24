@@ -35,7 +35,7 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                     blk = Solid()
 
                     for f in faces:
-                        mat = bpy.data.materials[f.material_index]
+                        mat = bpy.data.materials[f.material_index + 1]
                         verts = f.verts
                         pos = []
                         for v in f.verts:
