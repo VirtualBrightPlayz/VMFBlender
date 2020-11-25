@@ -2,6 +2,7 @@ import bpy
 import bpy_extras.io_utils
 import bmesh
 import mathutils
+import math
 from .cbre import VersionInfo, VmfVertex
 from .vmflib.vmflib import vmf
 from .vmflib.vmflib.types import Vertex, Output, Origin, Plane, Axis
@@ -38,8 +39,10 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                         mat = bpy.data.materials[f.material_index + 1]
                         verts = f.verts
                         pos = []
+                        norms = []
                         for v in f.verts:
                             pos.append(ob.matrix_world @ v.co)
+                            norms.append(ob.matrix_world @ v.normal)
                         if len(verts) == 3:
                             scale = 102.4
                             vert0 = Vertex(pos[0].x * scale, pos[0].y * scale, pos[0].z * scale)
@@ -54,24 +57,60 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                             vertx.properties["vertex2"] = vert0
                             side.children.append(vertx)
                             # side.uaxis, side.vaxis = plane.sensible_axes()
-                            side.uaxis, side.vaxis = self.axis_calc(plane)
-                            norms = f.normal
-                            # norms = f.calc_center_median() * norms
-                            # norms = ob.matrix_world @ norms
-                            ua = norms.copy()
-                            ua.rotate(mathutils.Euler((0.0, 90.0, 0.0)))
-                            va = norms.copy()
-                            va.rotate(mathutils.Euler((90.0, 0.0, 0.0)))
+                            # side.uaxis, side.vaxis = self.axis_calc(plane)
 
-                            # side.uaxis = Axis(ua.x, ua.y, ua.z, 0, 0)
-                            # side.vaxis = Axis(va.x, va.y, va.z, 0, 0)
+                            matrix = ob.matrix_world
+                            matrix2 = ob.matrix_world.inverted()
+
+
+                            ## world space
+                            d = f.normal.copy()
+                            d.normalize()
+                            d = mathutils.Vector((abs(d.x), abs(d.y), abs(d.z)))
+                            d = self.nearest_axis(d)
+                            ua = mathutils.Vector((1.0, 0.0, 0.0))
+                            if (d.x != 0.0):
+                                ua = mathutils.Vector((0.0, 1.0, 0.0))
+                            va = mathutils.Vector((0.0, 0.0, -1.0))
+                            if (d.z != 0.0):
+                                va = mathutils.Vector((0.0, -1.0, 0.0))
+
+
+                            ## face space
+                            # ua = f.normal.copy()
+                            # ua.normalize()
+                            # ua = mathutils.Vector((abs(ua.x), abs(ua.y), abs(ua.z)))
+                            # ua = self.nearest_axis(ua)
+                            # va = mathutils.Vector((0.0, 0.0, -1.0))
+                            # if (ua.z == 1.0):
+                            #     va = mathutils.Vector((0.0, -1.0, 0.0))
+                            # ua = f.normal.copy()
+                            # ua.normalize()
+                            # ua.cross(va)
+                            # va = f.normal.copy()
+                            # va.normalize()
+                            # va.cross(ua)
+
+                            side.uaxis = Axis(ua.x, ua.y, ua.z)
+                            side.vaxis = Axis(va.x, va.y, va.z)
+
                             uv_layer = 0
-                            
+
+                            xmin = min(min(f.loops[0][bm.loops.layers.uv.active].uv.x, f.loops[1][bm.loops.layers.uv.active].uv.x), f.loops[2][bm.loops.layers.uv.active].uv.x)
+                            xmax = max(max(f.loops[0][bm.loops.layers.uv.active].uv.x, f.loops[1][bm.loops.layers.uv.active].uv.x), f.loops[2][bm.loops.layers.uv.active].uv.x)
+                            ymin = min(min(f.loops[0][bm.loops.layers.uv.active].uv.y, f.loops[1][bm.loops.layers.uv.active].uv.y), f.loops[2][bm.loops.layers.uv.active].uv.y)
+                            ymax = max(max(f.loops[0][bm.loops.layers.uv.active].uv.y, f.loops[1][bm.loops.layers.uv.active].uv.y), f.loops[2][bm.loops.layers.uv.active].uv.y)
+
+                            # side.uaxis.scale = xmax - xmin
+                            # side.uaxis.translate = xmin
+                            # side.vaxis.scale = ymax - ymin
+                            # side.vaxis.translate = ymin
+
                             xs = f.loops[0][bm.loops.layers.uv.active].uv.x + f.loops[1][bm.loops.layers.uv.active].uv.x + f.loops[2][bm.loops.layers.uv.active].uv.x
                             ys = f.loops[0][bm.loops.layers.uv.active].uv.y + f.loops[1][bm.loops.layers.uv.active].uv.y + f.loops[2][bm.loops.layers.uv.active].uv.y
 
-                            side.uaxis.scale = xs / 3.0
-                            side.vaxis.scale = ys / 3.0
+                            # side.uaxis.scale = xs / 3.0
+                            # side.vaxis.scale = ys / 3.0
                             blk.children.append(side)
                         else:
                             print("a face was missed! " + str(f))
@@ -95,6 +134,13 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
+
+    def nearest_axis(self, normal):
+        if (normal.x >= normal.y and normal.x >= normal.z):
+            return mathutils.Vector((1.0, 0.0, 0.0))
+        if (normal.y >= normal.z):
+            return mathutils.Vector((0.0, 1.0, 0.0))
+        return mathutils.Vector((0.0, 0.0, 1.0))
 
     def axis_calc(self, axis):
         """Returns a sensible uaxis and vaxis for this plane."""
