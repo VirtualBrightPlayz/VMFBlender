@@ -120,6 +120,7 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
 
                     map.world.children.append(blk)
 
+                    bm.free()
             map.children.append(VersionInfo())
             map.world.skyname = None
             map.world.properties["mapversion"] = 1
