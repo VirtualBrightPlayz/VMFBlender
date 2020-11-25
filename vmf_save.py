@@ -28,10 +28,10 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                     bm = bmesh.new()
                     bm.from_mesh(mesh)
 
-                    data = bmesh.ops.triangulate(bm, faces=bm.faces)
+                    # data = bmesh.ops.triangulate(bm, faces=bm.faces)
 
-                    edges = data['edges']
-                    faces = data['faces']
+                    edges = bm.edges#data['edges']
+                    faces = bm.faces#data['faces']
 
                     blk = Solid()
 
@@ -43,7 +43,7 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                         for v in f.verts:
                             pos.append(ob.matrix_world @ v.co)
                             norms.append(ob.matrix_world @ v.normal)
-                        if len(verts) == 3:
+                        if len(verts) >= 3:
                             scale = 102.4
                             vert0 = Vertex(pos[0].x * scale, pos[0].y * scale, pos[0].z * scale)
                             vert1 = Vertex(pos[1].x * scale, pos[1].y * scale, pos[1].z * scale)
@@ -51,10 +51,13 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                             plane = Plane(vert2, vert1, vert0)
                             side = Side(plane, mat.name)
                             vertx = VmfVertex()
-                            vertx.properties["count"] = 3
-                            vertx.properties["vertex0"] = vert2
-                            vertx.properties["vertex1"] = vert1
-                            vertx.properties["vertex2"] = vert0
+                            vertx.properties["count"] = len(pos)
+                            for i in range(0, len(pos)):
+                                p = -i + len(pos) - 1
+                                vertx.properties["vertex" + str(p)] = Vertex(pos[i].x * scale, pos[i].y * scale, pos[i].z * scale)
+                            # vertx.properties["vertex0"] = vert2
+                            # vertx.properties["vertex1"] = vert1
+                            # vertx.properties["vertex2"] = vert0
                             side.children.append(vertx)
                             # side.uaxis, side.vaxis = plane.sensible_axes()
                             # side.uaxis, side.vaxis = self.axis_calc(plane)
@@ -101,10 +104,10 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                             ymin = min(min(f.loops[0][bm.loops.layers.uv.active].uv.y, f.loops[1][bm.loops.layers.uv.active].uv.y), f.loops[2][bm.loops.layers.uv.active].uv.y)
                             ymax = max(max(f.loops[0][bm.loops.layers.uv.active].uv.y, f.loops[1][bm.loops.layers.uv.active].uv.y), f.loops[2][bm.loops.layers.uv.active].uv.y)
 
-                            # side.uaxis.scale = xmax - xmin
-                            # side.uaxis.translate = xmin
-                            # side.vaxis.scale = ymax - ymin
-                            # side.vaxis.translate = ymin
+                            side.uaxis.scale = xmax - xmin
+                            side.uaxis.translate = xmin
+                            side.vaxis.scale = ymax - ymin
+                            side.vaxis.translate = ymin
 
                             xs = f.loops[0][bm.loops.layers.uv.active].uv.x + f.loops[1][bm.loops.layers.uv.active].uv.x + f.loops[2][bm.loops.layers.uv.active].uv.x
                             ys = f.loops[0][bm.loops.layers.uv.active].uv.y + f.loops[1][bm.loops.layers.uv.active].uv.y + f.loops[2][bm.loops.layers.uv.active].uv.y
