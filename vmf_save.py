@@ -3,7 +3,8 @@ import bpy_extras.io_utils
 import bmesh
 import mathutils
 import math
-from .cbre import VersionInfo, VmfVertex
+from .cbre import VersionInfoCBRE
+from .hl2 import VersionInfoHL2, VmfVertex
 from .vmflib.vmflib import vmf
 from .vmflib.vmflib.types import Vertex, Output, Origin, Plane, Axis
 from .vmflib.vmflib.tools import Block
@@ -20,6 +21,9 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
 
             print("filepath=" + self.filepath)
             map = vmf.ValveMap()
+            # change to 102.4 for cbre
+            # 1024 = hl2
+            scale = 1024
 
             for ob in bpy.data.objects:
                 if ob.type == 'MESH':
@@ -27,13 +31,6 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
 
                     mesh.validate_material_indices()
 
-                    # bm = bmesh.new()
-                    # bm.from_mesh(mesh)
-
-                    # data = bmesh.ops.triangulate(bm, faces=bm.faces)
-
-                    # edges = bm.edges#data['edges']
-                    # faces = bm.faces#data['faces']
                     faces = mesh.polygons
                     loops = mesh.loops
                     edges = mesh.edges
@@ -55,7 +52,6 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                             norms.append(vertices[loops[v].vertex_index].normal)
                             uvs.append(uv[v].uv)
                         if len(pos) >= 3:
-                            scale = 102.4
                             vert0 = Vertex(pos[0].x * scale, pos[0].y * scale, pos[0].z * scale)
                             vert1 = Vertex(pos[1].x * scale, pos[1].y * scale, pos[1].z * scale)
                             vert2 = Vertex(pos[2].x * scale, pos[2].y * scale, pos[2].z * scale)
@@ -95,14 +91,19 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                             d.normalize()
                             d = mathutils.Vector((abs(d.x), abs(d.y), abs(d.z)))
                             iod = self.nearest_axis(d)
-                            va = mathutils.Vector((0.0, 0.0, -1.0))
+                            tempv = mathutils.Vector((0.0, 0.0, -1.0))
+                            # if (iod == 1):
+                                # tempv = mathutils.Vector((0.0, 0.0, -1.0))
+                            # if (iod == 1):
+                            #     tempv = mathutils.Vector((-1.0, 0.0, 0.0))
                             if (iod == 3):
-                                va = mathutils.Vector((0.0, -1.0, 0.0))
-                            ua = norm.copy().normalized().cross(va).normalized()
+                                tempv = mathutils.Vector((0.0, -1.0, 0.0))
+                            ua = norm.copy().normalized().cross(tempv).normalized()
                             va = ua.cross(norm.copy().normalized()).normalized()
 
                             side.uaxis = Axis(ua.x, ua.y, ua.z)
                             side.vaxis = Axis(va.x, va.y, va.z)
+                            side.rotation = 0
 
                             uv_layer = 0
 
@@ -214,7 +215,7 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                     map.world.children.append(blk)
 
                     # bm.free()
-            map.children.append(VersionInfo())
+            map.children.append(VersionInfoHL2())
             map.world.skyname = None
             map.world.properties["mapversion"] = 1
             map.cordon.maxs.x = 1024.0
