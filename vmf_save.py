@@ -22,8 +22,8 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
             print("filepath=" + self.filepath)
             map = vmf.ValveMap()
             # change to 102.4 for cbre
-            # 1024 = hl2
-            scale = 1024
+            # 102.4 = hl2
+            scale = 102.4
 
             for ob in bpy.data.objects:
                 if ob.type == 'MESH':
