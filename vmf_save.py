@@ -143,7 +143,7 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                             d.normalize()
                             # mymatrix = mathutils.Matrix.OrthoProjection(d, 4)
 
-                            print(mymatrix @ pos[0])
+                            # print(mymatrix @ pos[0])
 
                             for p in pos:
                                 pos2.append(mymatrix @ p)
