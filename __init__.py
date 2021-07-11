@@ -24,12 +24,23 @@ bl_info = {
 
 import bpy
 
-from .vmf_panel import VMF_PT_Panel
+from .vmf_panel import VMF_PT_Panel, VMF_PT_Settings
 from .vmf_save import VMF_Save_OT_Operator
+from .vmf_loadtex import VMF_LoadTex_OT_Operator
 
-classes = (VMF_PT_Panel, VMF_Save_OT_Operator)
+classes = (VMF_PT_Panel, VMF_Save_OT_Operator, VMF_LoadTex_OT_Operator)
 
-register, unregister = bpy.utils.register_classes_factory(classes)
+
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
+    bpy.types.Scene.vmf_texfolder = bpy.props.StringProperty(subtype="DIR_PATH")
+
+def unregister():
+    del bpy.types.Scene.vmf_texfolder
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+# register, unregister = bpy.utils.register_classes_factory(classes)
 
 if __name__ == "__main__":
     register()

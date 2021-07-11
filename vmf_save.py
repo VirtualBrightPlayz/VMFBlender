@@ -14,12 +14,13 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
     bl_idname = "vmf.save"
     bl_description = "Saves as VMF"
     bl_label = "Save as VMF"
-    filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+    texpath = ""
 
     def execute(self, context):
-        if (self.filepath.endswith(".vmf")):
+        print("filepath=" + str(self.filepath))
+        if (str(self.filepath).endswith(".vmf")):
 
-            print("filepath=" + self.filepath)
             map = vmf.ValveMap()
             # change to 102.4 for cbre
             # 102.4 = hl2
@@ -167,24 +168,6 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                                 if pos2[i] < pos2[idmin]:
                                     idmin = i
 
-                            # xmin = uvs[idmin].x
-                            # xmax = uvs[idmax].x
-                            # ymin = uvs[idmin].y
-                            # ymax = uvs[idmax].y
-
-                            # xmin = xcent - xmin
-                            # xmax = xcent + xmax
-                            # ymin = ycent - ymin
-                            # ymax = ycent + ymax
-
-                            # xmax = uvs[idmax][0]
-                            # ymax = uvs[idmax][1]
-
-                            # xmin = min(min(f.loops[0][bm.loops.layers.uv.active].uv.x, f.loops[1][bm.loops.layers.uv.active].uv.x), f.loops[2][bm.loops.layers.uv.active].uv.x)
-                            # xmax = max(max(f.loops[0][bm.loops.layers.uv.active].uv.x, f.loops[1][bm.loops.layers.uv.active].uv.x), f.loops[2][bm.loops.layers.uv.active].uv.x)
-                            # ymin = min(min(f.loops[0][bm.loops.layers.uv.active].uv.y, f.loops[1][bm.loops.layers.uv.active].uv.y), f.loops[2][bm.loops.layers.uv.active].uv.y)
-                            # ymax = max(max(f.loops[0][bm.loops.layers.uv.active].uv.y, f.loops[1][bm.loops.layers.uv.active].uv.y), f.loops[2][bm.loops.layers.uv.active].uv.y)
-
                             if mat is not None and mat.node_tree:
                                 for x in mat.node_tree.nodes:
                                     if x.type == 'TEX_IMAGE':
@@ -193,14 +176,15 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                                         # print(xmin)
                                         # print(xmax)
                                         s = x.image.size
+                                        # print(s[0])
                                         # side.uaxis.scale = -((xmin / pos2[idxmin].x) - (xmax / pos2[idxmax].x)) % 1.0 #- 1.0
                                         # side.uaxis.scale = (pos2[idxmax].x - pos2[idxmin].x) % 1.0 #- 1.0
-                                        # side.uaxis.scale = (xmin - xmax) * -1.0 % 1.0
-                                        # side.uaxis.translate = (xmin) * s[0]
+                                        side.uaxis.scale = (xmax - xmin) * -1.0 % 1.0
+                                        side.uaxis.translate = (xmin) * s[0]
                                         # side.vaxis.scale = -((ymin / pos2[idzmin].y) - (ymax / pos2[idzmax].y)) % 1.0 #- 1.0
                                         # side.vaxis.scale = (pos2[idymax].y - pos2[idymin].y) % 1.0 #- 1.0
-                                        # side.vaxis.scale = (ymin - ymax) * -1.0 % 1.0
-                                        # side.vaxis.translate = (ymin) * s[1]
+                                        side.vaxis.scale = (ymax - ymin) * -1.0 % 1.0
+                                        side.vaxis.translate = (ymin) * s[1]
                                         break
 
                             # xs = f.loops[0][bm.loops.layers.uv.active].uv.x + f.loops[1][bm.loops.layers.uv.active].uv.x + f.loops[2][bm.loops.layers.uv.active].uv.x
@@ -215,7 +199,7 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                     map.world.children.append(blk)
 
                     # bm.free()
-            map.children.append(VersionInfoHL2())
+            map.children.append(VersionInfoCBRE())
             map.world.skyname = None
             map.world.properties["mapversion"] = 1
             map.cordon.maxs.x = 1024.0
