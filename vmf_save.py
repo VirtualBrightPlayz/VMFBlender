@@ -179,11 +179,11 @@ class VMF_Save_OT_Operator(bpy.types.Operator):
                                         # print(s[0])
                                         # side.uaxis.scale = -((xmin / pos2[idxmin].x) - (xmax / pos2[idxmax].x)) % 1.0 #- 1.0
                                         # side.uaxis.scale = (pos2[idxmax].x - pos2[idxmin].x) % 1.0 #- 1.0
-                                        side.uaxis.scale = (xmax - xmin) * -1.0 % 1.0
+                                        side.uaxis.scale = (xmax + xmin) / 2.0 #% 1.0
                                         side.uaxis.translate = (xmin) * s[0]
                                         # side.vaxis.scale = -((ymin / pos2[idzmin].y) - (ymax / pos2[idzmax].y)) % 1.0 #- 1.0
                                         # side.vaxis.scale = (pos2[idymax].y - pos2[idymin].y) % 1.0 #- 1.0
-                                        side.vaxis.scale = (ymax - ymin) * -1.0 % 1.0
+                                        side.vaxis.scale = (ymax + ymin) / 2.0 #% 1.0
                                         side.vaxis.translate = (ymin) * s[1]
                                         break
 
